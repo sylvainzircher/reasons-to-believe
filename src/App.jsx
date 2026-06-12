@@ -1,8 +1,108 @@
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import Library from './pages/Library.jsx'
 import Article from './pages/Article.jsx'
 import Chat from './pages/Chat.jsx'
 import { articles } from './lib/articles.js'
+
+// ── Password gate ────────────────────────────────────────────────
+const SESSION_KEY = 'rf_auth'
+const CORRECT = import.meta.env.VITE_APP_PASSWORD
+
+function PasswordGate({ children }) {
+  const [unlocked, setUnlocked] = useState(
+    () => sessionStorage.getItem(SESSION_KEY) === '1'
+  )
+  const [input, setInput] = useState('')
+  const [error, setError] = useState(false)
+
+  if (unlocked) return children
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (input === CORRECT) {
+      sessionStorage.setItem(SESSION_KEY, '1')
+      setUnlocked(true)
+    } else {
+      setError(true)
+      setInput('')
+      setTimeout(() => setError(false), 2000)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24,
+    }}>
+      <div style={{ width: '100%', maxWidth: 360 }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: '#f3f4f6', border: '1px solid #e5e7eb',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', fontSize: 22,
+          }}>
+            📚
+          </div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#0d0d0d', marginBottom: 6 }}>
+            Reasons &amp; Faith
+          </h1>
+          <p style={{ fontSize: 14, color: '#6b7280' }}>Enter your password to continue</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <input
+            type="password"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Password"
+            autoFocus
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: `1.5px solid ${error ? '#fca5a5' : '#e5e7eb'}`,
+              borderRadius: 10,
+              fontSize: 15,
+              color: '#0d0d0d',
+              outline: 'none',
+              background: error ? '#fef2f2' : '#f9fafb',
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+            onFocus={e => { if (!error) e.target.style.borderColor = '#10a37f' }}
+            onBlur={e => { if (!error) e.target.style.borderColor = '#e5e7eb' }}
+          />
+          {error && (
+            <p style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', margin: '-4px 0' }}>
+              Incorrect password
+            </p>
+          )}
+          <button
+            type="submit"
+            style={{
+              padding: '12px',
+              background: '#10a37f',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.target.style.background = '#059669'}
+            onMouseLeave={e => e.target.style.background = '#10a37f'}
+          >
+            Unlock
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 // ── Mobile top bar ──────────────────────────────────────────────
 function MobileTopBar() {
@@ -133,8 +233,10 @@ function AppInner() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppInner />
-    </BrowserRouter>
+    <PasswordGate>
+      <BrowserRouter>
+        <AppInner />
+      </BrowserRouter>
+    </PasswordGate>
   )
 }
