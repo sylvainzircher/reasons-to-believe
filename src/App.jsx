@@ -32,21 +32,12 @@ function PasswordGate({ children }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#fff',
+      width: '100vw', height: '100vh', background: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
     }}>
       <div style={{ width: '100%', maxWidth: 360 }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 12,
-            background: '#f3f4f6', border: '1px solid #e5e7eb',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px', fontSize: 22,
-          }}>
-            📚
-          </div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#0d0d0d', marginBottom: 6 }}>
             Reasons &amp; Faith
           </h1>
