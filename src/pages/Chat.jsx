@@ -9,23 +9,63 @@ const client = new Anthropic({
   dangerouslyAllowBrowser: true,
 })
 
-function buildContext() {
-  return articles.map(a =>
-    `--- ARTICLE: "${a.title}" | URL: /article/${a.slug} | Source: ${a.source || 'Unknown'} | Tags: ${a.tags.join(', ')} ---\n${a.content}`
+const MAX_CHARS_PER_ARTICLE = 3000
+const MAX_ARTICLES = 8
+
+function truncate(text, max) {
+  if (text.length <= max) return text
+  return text.slice(0, max) + '\n\n[...article continues...]'
+}
+
+function scoreArticle(article, query) {
+  const q = query.toLowerCase()
+  const words = q.split(/\s+/).filter(w => w.length > 3)
+  let score = 0
+  const haystack = [
+    article.title,
+    article.source,
+    article.tags.join(' '),
+    article.content.slice(0, 1000),
+  ].join(' ').toLowerCase()
+
+  for (const word of words) {
+    if (haystack.includes(word)) score += 1
+  }
+  // Bonus for title/tag match
+  if (article.title.toLowerCase().includes(q)) score += 5
+  if (article.tags.some(t => q.includes(t.toLowerCase()))) score += 3
+  return score
+}
+
+function buildContext(query = '') {
+  let ranked = [...articles]
+
+  if (query.trim()) {
+    ranked = ranked
+      .map(a => ({ ...a, _score: scoreArticle(a, query) }))
+      .sort((a, b) => b._score - a._score)
+  }
+
+  const selected = ranked.slice(0, MAX_ARTICLES)
+
+  return selected.map(a =>
+    `--- ARTICLE: "${a.title}" | URL: /article/${a.slug} | Source: ${a.source || 'Unknown'} | Tags: ${a.tags.join(', ')} ---\n${truncate(a.content, MAX_CHARS_PER_ARTICLE)}`
   ).join('\n\n')
 }
 
-const SYSTEM = `You are a knowledgeable research assistant for the "Reasons & Faith" knowledge library.
+function buildSystem(query) {
+  return `You are a knowledgeable research assistant for the "Reasons & Faith" knowledge library.
 
-You have access to the following articles:
+You have access to the following articles (most relevant to the current question):
 
-${buildContext()}
+${buildContext(query)}
 
 Rules:
 - Answer ONLY from the articles above. Do not use outside knowledge.
 - When referencing an article, always link to it using its URL in markdown format, e.g. [Article Title](/article/slug).
 - If the answer is not in the articles, say: "I don't have information about that in the current library."
 - Be concise and clear. Format with markdown when helpful.`
+}
 
 // Suggested prompts shown in empty state
 const SUGGESTIONS = [
@@ -112,7 +152,7 @@ export default function Chat() {
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
         max_tokens: 1024,
-        system: SYSTEM,
+        system: buildSystem(trimmed),
         messages: newMessages,
       })
       const assistantText = response.content[0]?.text || ''
